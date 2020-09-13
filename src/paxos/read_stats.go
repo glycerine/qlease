@@ -1,15 +1,15 @@
 package paxos
 
 import (
-	"state"
-	"qleaseproto"
+	"github.com/efficient/qlease/qleaseproto"
+	"github.com/efficient/qlease/state"
 )
 
 type ReadStats struct {
-	N int
+	N        int
 	leaderId int32
-	freqMap map[state.Key][]int
-	prevMap map[state.Key][]int
+	freqMap  map[state.Key][]int
+	prevMap  map[state.Key][]int
 }
 
 func NewReadStats(N int, leaderId int32) *ReadStats {
@@ -61,16 +61,16 @@ func (rs *ReadStats) GetQuorums() []qleaseproto.LeaseMetadata {
 
 		found := false
 		if pq, present := rs.prevMap[k]; present {
-		    for pf := range pq {
-		    	if pf > v[r1] && pf > v[r2] {
-		    		found = true
-		    		break
-		    	}
-		    }
+			for pf := range pq {
+				if pf > v[r1] && pf > v[r2] {
+					found = true
+					break
+				}
+			}
 		}
-	    if found {
-	    	continue
-	    }
+		if found {
+			continue
+		}
 		rs.prevMap[k] = v
 
 		key64 := (int64(r1) << 32) | int64(r2)
@@ -79,19 +79,19 @@ func (rs *ReadStats) GetQuorums() []qleaseproto.LeaseMetadata {
 			s = make([]state.Key, 0, 1000)
 		}
 		if len(s) == cap(s) {
-			ns := make([]state.Key, len(s), 2 * (cap(s) + 1 ))
+			ns := make([]state.Key, len(s), 2*(cap(s)+1))
 			copy(ns, s)
 			s = ns
 		}
-		s = s[0 : len(s) + 1]
-		s[len(s) - 1] = k
+		s = s[0 : len(s)+1]
+		s[len(s)-1] = k
 		lm[key64] = s
 	}
 	ret := make([]qleaseproto.LeaseMetadata, len(lm))
 	i := 0
 	for q64, keys := range lm {
 		ret[i].ObjectKeys = keys
-		quorum := make([]int32, rs.N / 2 + 1)
+		quorum := make([]int32, rs.N/2+1)
 		quorum[0] = rs.leaderId
 		quorum[1] = int32(q64 >> 32)
 		if rs.N > 3 {

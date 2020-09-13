@@ -1,12 +1,13 @@
 package qleaseproto
 
 import (
-	"io"
-	"sync"
-	"fastrpc"
 	"bufio"
 	"encoding/binary"
-	"state"
+	"io"
+	"sync"
+
+	"github.com/efficient/qlease/fastrpc"
+	"github.com/efficient/qlease/state"
 )
 
 type byteReader interface {
@@ -22,8 +23,8 @@ func (t *Guard) BinarySize() (nbytes int, sizeKnown bool) {
 }
 
 type GuardCache struct {
-	mu	sync.Mutex
-	cache	[]*Guard
+	mu    sync.Mutex
+	cache []*Guard
 }
 
 func NewGuardCache() *GuardCache {
@@ -101,8 +102,8 @@ func (t *GuardReply) BinarySize() (nbytes int, sizeKnown bool) {
 }
 
 type GuardReplyCache struct {
-	mu	sync.Mutex
-	cache	[]*GuardReply
+	mu    sync.Mutex
+	cache []*GuardReply
 }
 
 func NewGuardReplyCache() *GuardReplyCache {
@@ -170,8 +171,8 @@ func (t *Promise) BinarySize() (nbytes int, sizeKnown bool) {
 }
 
 type PromiseCache struct {
-	mu	sync.Mutex
-	cache	[]*Promise
+	mu    sync.Mutex
+	cache []*Promise
 }
 
 func NewPromiseCache() *PromiseCache {
@@ -261,8 +262,8 @@ func (t *PromiseReply) BinarySize() (nbytes int, sizeKnown bool) {
 }
 
 type PromiseReplyCache struct {
-	mu	sync.Mutex
-	cache	[]*PromiseReply
+	mu    sync.Mutex
+	cache []*PromiseReply
 }
 
 func NewPromiseReplyCache() *PromiseReplyCache {
@@ -336,8 +337,8 @@ func (t *LeaseMetadata) BinarySize() (nbytes int, sizeKnown bool) {
 }
 
 type LeaseMetadataCache struct {
-	mu	sync.Mutex
-	cache	[]*LeaseMetadata
+	mu    sync.Mutex
+	cache []*LeaseMetadata
 }
 
 func NewLeaseMetadataCache() *LeaseMetadataCache {
