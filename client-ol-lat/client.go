@@ -1,21 +1,22 @@
 package main
 
 import (
-    "log"
-	"dlog"
-    "net"
-	"net/rpc"
+	"bufio"
 	"flag"
 	"fmt"
-    "genericsmrproto"
-    "state"
-    "runtime"
-    "masterproto"
-    "math/rand"
-    "time"
-    "bufio"
-    "ycsbzipf"
-    "randperm"
+	"log"
+	"math/rand"
+	"net"
+	"net/rpc"
+	"runtime"
+	"time"
+
+	"github.com/glycerine/qlease/dlog"
+	"github.com/glycerine/qlease/genericsmrproto"
+	"github.com/glycerine/qlease/masterproto"
+	"github.com/glycerine/qlease/randperm"
+	"github.com/glycerine/qlease/state"
+	"github.com/glycerine/qlease/ycsbzipf"
 )
 
 var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")
@@ -44,286 +45,284 @@ var rarray []int
 var rsp []bool
 
 type Reading struct {
-    sent int64
-    latency int64    
+	sent    int64
+	latency int64
 }
 
 func main() {
-    flag.Parse()
+	flag.Parse()
 
-    runtime.GOMAXPROCS(*procs)
+	runtime.GOMAXPROCS(*procs)
 
-    randObj := rand.New(rand.NewSource(42 + int64(*forceLeader)))
-    //zipf := rand.NewZipf(randObj, *s, *v, uint64(*reqsNb / *rounds + *eps))
-    zipf := ycsbzipf.NewZipf(int(*reqsNb / *rounds + *eps), randObj)
+	randObj := rand.New(rand.NewSource(42 + int64(*forceLeader)))
+	//zipf := rand.NewZipf(randObj, *s, *v, uint64(*reqsNb / *rounds + *eps))
+	zipf := ycsbzipf.NewZipf(int(*reqsNb / *rounds + *eps), randObj)
 
-    if *conflicts > 100 {
-        log.Fatalf("Conflicts percentage must be between 0 and 100.\n")
-    }
+	if *conflicts > 100 {
+		log.Fatalf("Conflicts percentage must be between 0 and 100.\n")
+	}
 
-    master, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", *masterAddr, *masterPort))
-    if err != nil {
-        log.Fatalf("Error connecting to master\n")
-    }
+	master, err := rpc.DialHTTP("tcp", fmt.Sprintf("%s:%d", *masterAddr, *masterPort))
+	if err != nil {
+		log.Fatalf("Error connecting to master\n")
+	}
 
-    rlReply := new(masterproto.GetReplicaListReply)
-    err = master.Call("Master.GetReplicaList", new(masterproto.GetReplicaListArgs), rlReply)
-    if err != nil {
-        log.Fatalf("Error making the GetReplicaList RPC")
-    }
+	rlReply := new(masterproto.GetReplicaListReply)
+	err = master.Call("Master.GetReplicaList", new(masterproto.GetReplicaListArgs), rlReply)
+	if err != nil {
+		log.Fatalf("Error making the GetReplicaList RPC")
+	}
 
-    N = len(rlReply.ReplicaList)
-    servers := make([]net.Conn, N)
-    readers := make([]*bufio.Reader, N)
-    writers := make([]*bufio.Writer, N)
+	N = len(rlReply.ReplicaList)
+	servers := make([]net.Conn, N)
+	readers := make([]*bufio.Reader, N)
+	writers := make([]*bufio.Writer, N)
 
-    rarray = make([]int, *reqsNb / *rounds + *eps)
-    karrays := make([][]int64, N)
-    iarray := make([]int, *reqsNb / *rounds + *eps)
-    put := make([]bool, *reqsNb / *rounds + *eps)
-    perReplicaCount := make([]int, N)
-    test := make([]int, *reqsNb / *rounds + *eps)
+	rarray = make([]int, *reqsNb / *rounds + *eps)
+	karrays := make([][]int64, N)
+	iarray := make([]int, *reqsNb / *rounds + *eps)
+	put := make([]bool, *reqsNb / *rounds + *eps)
+	perReplicaCount := make([]int, N)
+	test := make([]int, *reqsNb / *rounds + *eps)
 
-    for j := 0; j < N; j++ {
-        karrays[j] = make([]int64, *reqsNb / *rounds + *eps)
-        for i := 0; i < len(karrays[j]); i++ {
-            karrays[j][i] = int64(i)
-        }
-        robj := rand.New(rand.NewSource(442 + int64(j)))
-        randperm.Permute(karrays[j], robj)
-    }
+	for j := 0; j < N; j++ {
+		karrays[j] = make([]int64, *reqsNb / *rounds + *eps)
+		for i := 0; i < len(karrays[j]); i++ {
+			karrays[j][i] = int64(i)
+		}
+		robj := rand.New(rand.NewSource(442 + int64(j)))
+		randperm.Permute(karrays[j], robj)
+	}
 
+	for i := 0; i < len(rarray); i++ {
+		r := rand.Intn(N)
+		rarray[i] = r
+		if i < *reqsNb / *rounds {
+			perReplicaCount[r]++
+		}
 
-    for i := 0; i < len(rarray); i++ {
-        r := rand.Intn(N)
-        rarray[i] = r
-        if i < *reqsNb / *rounds {
-            perReplicaCount[r]++
-        }
+		if *conflicts >= 0 {
+			r = rand.Intn(100)
+			if r < *conflicts {
+				iarray[i] = 0
+			} else {
+				iarray[i] = i
+			}
+		} else {
+			iarray[i] = int(zipf.NextInt64())
+			test[karrays[rarray[i]][iarray[i]]]++
+		}
 
-        if *conflicts >= 0 {
-            r = rand.Intn(100)
-            if r < *conflicts {
-                iarray[i] = 0
-            } else {
-                iarray[i] = i
-            }
-        } else {
-            iarray[i] = int(zipf.NextInt64())
-            test[karrays[rarray[i]][iarray[i]]]++
-        }
+		r = rand.Intn(100)
+		if r < *writes {
+			put[i] = true
+		} else {
+			put[i] = false
+		}
+	}
+	if *conflicts >= 0 {
+		fmt.Println("Uniform distribution")
+	} else {
+		fmt.Println("Zipfian distribution:")
+		//fmt.Println(test[0:100])
+	}
 
-        r = rand.Intn(100)
-        if r < *writes {
-            put[i] = true
-        } else {
-            put[i] = false
-        }
-    }
-    if *conflicts >= 0 {
-        fmt.Println("Uniform distribution")
-    } else {
-        fmt.Println("Zipfian distribution:")
-        //fmt.Println(test[0:100])
-    }
+	for i := 0; i < N; i++ {
+		var err error
+		servers[i], err = net.Dial("tcp", rlReply.ReplicaList[i])
+		if err != nil {
+			log.Printf("Error connecting to replica %d\n", i)
+		}
+		readers[i] = bufio.NewReader(servers[i])
+		writers[i] = bufio.NewWriter(servers[i])
+	}
 
-    for i := 0; i < N; i++ {
-        var err error
-        servers[i], err = net.Dial("tcp", rlReply.ReplicaList[i])
-        if err != nil {
-            log.Printf("Error connecting to replica %d\n", i)
-        }
-        readers[i] = bufio.NewReader(servers[i])
-        writers[i] = bufio.NewWriter(servers[i])
-    }
+	successful = make([]int, N)
+	local = make([]int, N)
+	leader := 0
 
-    successful = make([]int, N)
-    local = make([]int, N)
-    leader := 0
+	if *noLeader == false {
+		reply := new(masterproto.GetLeaderReply)
+		if err = master.Call("Master.GetLeader", new(masterproto.GetLeaderArgs), reply); err != nil {
+			log.Fatalf("Error making the GetLeader RPC\n")
+		}
+		leader = reply.LeaderId
+		log.Printf("The leader is replica %d\n", leader)
+	} else if *forceLeader > 0 {
+		leader = *forceLeader
+		log.Printf("My leader is replica %d\n", leader)
+	}
 
-    if *noLeader == false {
-        reply := new(masterproto.GetLeaderReply)
-        if err = master.Call("Master.GetLeader", new(masterproto.GetLeaderArgs), reply); err != nil {
-            log.Fatalf("Error making the GetLeader RPC\n")
-        }
-        leader = reply.LeaderId
-        log.Printf("The leader is replica %d\n", leader)
-    } else if *forceLeader > 0 {
-        leader = *forceLeader
-        log.Printf("My leader is replica %d\n", leader)
-    }
+	var id int32 = 0
+	done := make(chan bool, N)
+	args := genericsmrproto.Propose{id, state.Command{state.PUT, 0, 0}, 0}
 
-    var id int32 = 0
-    done := make(chan bool, N)
-    args := genericsmrproto.Propose{id, state.Command{state.PUT, 0, 0}, 0}
+	before_total := time.Now()
 
-    before_total := time.Now()
+	for j := 0; j < *rounds; j++ {
 
-    for j := 0; j < *rounds; j++ {
+		n := *reqsNb / *rounds
 
-        n := *reqsNb / *rounds
+		if *check {
+			rsp = make([]bool, n)
+			for j := 0; j < n; j++ {
+				rsp[j] = false
+			}
+		}
 
-        if *check {
-            rsp = make([]bool, n)
-            for j := 0; j < n; j++ {
-                rsp[j] = false
-            }
-        }
+		donePrinting := make(chan bool)
+		readings := make(chan Reading, n)
 
-        donePrinting := make(chan bool)
-        readings := make(chan Reading, n)
+		go printer(readings, donePrinting)
 
-        go printer(readings, donePrinting)
+		if *noLeader {
+			for i := 0; i < N; i++ {
+				go waitReplies(readers, i, perReplicaCount[i], done, readings)
+			}
+		} else {
+			go waitReplies(readers, leader, n, done, readings)
+		}
 
-        if (*noLeader) {
-            for i := 0; i < N; i++ {
-                go waitReplies(readers, i, perReplicaCount[i], done, readings)
-            }
-        } else {
-            go waitReplies(readers, leader, n, done, readings)
-        }
+		before := time.Now()
 
-        before := time.Now()
+		for i := 0; i < n+*eps; i++ {
+			dlog.Printf("Sending proposal %d\n", id)
+			args.CommandId = id
+			if put[i] {
+				args.Command.Op = state.PUT
+			} else {
+				args.Command.Op = state.GET
+			}
+			if !*fast && *noLeader {
+				leader = rarray[i]
+			}
+			args.Command.K = state.Key(karrays[leader][iarray[i]])
+			args.Command.V = state.Value(i) + 1
+			args.Timestamp = time.Now().UnixNano()
+			if !*fast {
+				writers[leader].WriteByte(genericsmrproto.PROPOSE)
+				args.Marshal(writers[leader])
+			} else {
+				//send to everyone
+				for rep := 0; rep < N; rep++ {
+					writers[rep].WriteByte(genericsmrproto.PROPOSE)
+					args.Marshal(writers[rep])
+					writers[rep].Flush()
+				}
+			}
+			//fmt.Println("Sent", id)
+			id++
 
-        for i := 0; i < n + *eps; i++ {
-            dlog.Printf("Sending proposal %d\n", id)
-            args.CommandId = id
-            if put[i] {
-                args.Command.Op = state.PUT
-            } else {
-                args.Command.Op = state.GET
-            }
-            if !*fast && *noLeader {
-                leader = rarray[i]
-            }
-            args.Command.K = state.Key(karrays[leader][iarray[i]])
-            args.Command.V = state.Value(i) + 1
-            args.Timestamp = time.Now().UnixNano()
-            if !*fast {
-                writers[leader].WriteByte(genericsmrproto.PROPOSE)
-                args.Marshal(writers[leader])
-            } else {
-                //send to everyone
-                for rep := 0; rep < N; rep++ {
-                    writers[rep].WriteByte(genericsmrproto.PROPOSE)
-                    args.Marshal(writers[rep])
-                    writers[rep].Flush()
-                }
-            }
-            //fmt.Println("Sent", id)
-            id++
-
-            if i % *batch == 0 {
-                for i := 0; i < N; i++ {
-                    writers[i].Flush()
-                }
+			if i%*batch == 0 {
+				for i := 0; i < N; i++ {
+					writers[i].Flush()
+				}
 				if *nanosleep > 0 {
 					time.Sleep(time.Duration(*nanosleep))
 				}
-            }
-        }
-        for i := 0; i < N; i++ {
-            writers[i].Flush()
-        }
+			}
+		}
+		for i := 0; i < N; i++ {
+			writers[i].Flush()
+		}
 
-        err := false
-        if *noLeader {
-            for i := 0; i < N; i++ {
-                e:= <-done
-                err = e || err
-            }
-        } else {
-            err = <-done
-        }
+		err := false
+		if *noLeader {
+			for i := 0; i < N; i++ {
+				e := <-done
+				err = e || err
+			}
+		} else {
+			err = <-done
+		}
 
-        after := time.Now()
+		after := time.Now()
 
-        <-donePrinting
+		<-donePrinting
 
-        fmt.Printf("Round took %v\n", after.Sub(before))
+		fmt.Printf("Round took %v\n", after.Sub(before))
 
-        if *check {
-            for j := 0; j < n; j++ {
-                if !rsp[j] {
-                    fmt.Println("Didn't receive", j)
-                }
-            }
-        }
+		if *check {
+			for j := 0; j < n; j++ {
+				if !rsp[j] {
+					fmt.Println("Didn't receive", j)
+				}
+			}
+		}
 
+		if err {
+			if *noLeader {
+				N = N - 1
+			} else {
+				reply := new(masterproto.GetLeaderReply)
+				master.Call("Master.GetLeader", new(masterproto.GetLeaderArgs), reply)
+				leader = reply.LeaderId
+				log.Printf("New leader is replica %d\n", leader)
+			}
+		}
+	}
 
-        if err {
-            if *noLeader {
-                N = N - 1
-            } else {
-                reply := new(masterproto.GetLeaderReply)
-                master.Call("Master.GetLeader", new(masterproto.GetLeaderArgs), reply)
-                leader = reply.LeaderId
-                log.Printf("New leader is replica %d\n", leader)
-            }
-        }
-    }
+	after_total := time.Now()
+	fmt.Printf("Test took %v\n", after_total.Sub(before_total))
 
-    after_total := time.Now()
-    fmt.Printf("Test took %v\n", after_total.Sub(before_total))
+	s := 0
+	ltot := 0
+	for _, succ := range successful {
+		s += succ
+	}
 
-    s := 0
-    ltot := 0
-    for _, succ := range successful {
-        s += succ
-    }
+	for _, loc := range local {
+		ltot += loc
+	}
 
-    for _, loc := range local {
-        ltot += loc
-    }
+	fmt.Printf("Successful: %d\n", s)
+	fmt.Printf("Local Reads: %d\n", ltot)
 
-    fmt.Printf("Successful: %d\n", s)
-    fmt.Printf("Local Reads: %d\n", ltot)
-
-    for _, client := range servers {
-        if client != nil {
-            client.Close()
-        }
-    }
-    master.Close()
+	for _, client := range servers {
+		if client != nil {
+			client.Close()
+		}
+	}
+	master.Close()
 }
 
 func waitReplies(readers []*bufio.Reader, leader int, n int, done chan bool, readings chan Reading) {
-    e := false
+	e := false
 
 	//tss := make([]int64, n)
 
-    reply := new(genericsmrproto.ProposeReplyTS)
-    for i := 0; i < n; i++ {
-        /*if *noLeader {
-            leader = rarray[i]
-        }*/
-        if err := reply.Unmarshal(readers[leader]); err != nil {
-            fmt.Println("Error when reading:", err)
-            e = true
-            continue
-        }
+	reply := new(genericsmrproto.ProposeReplyTS)
+	for i := 0; i < n; i++ {
+		/*if *noLeader {
+		    leader = rarray[i]
+		}*/
+		if err := reply.Unmarshal(readers[leader]); err != nil {
+			fmt.Println("Error when reading:", err)
+			e = true
+			continue
+		}
 
-        var reading Reading
+		var reading Reading
 
-        reading.sent = reply.Timestamp
-        reading.latency = time.Now().UnixNano() - reply.Timestamp
+		reading.sent = reply.Timestamp
+		reading.latency = time.Now().UnixNano() - reply.Timestamp
 
 		readings <- reading
 
-        if *check {
-            if rsp[reply.CommandId] {
-                fmt.Println("Duplicate reply", reply.CommandId)
-            }
-            rsp[reply.CommandId] = true
-        }
-        if reply.OK != 0 {
-            successful[leader]++
-            if reply.Value == 1000772 { //hack: special value means read was local
-                local[leader]++
-            }
-        }
-    }
-    done <- e
+		if *check {
+			if rsp[reply.CommandId] {
+				fmt.Println("Duplicate reply", reply.CommandId)
+			}
+			rsp[reply.CommandId] = true
+		}
+		if reply.OK != 0 {
+			successful[leader]++
+			if reply.Value == 1000772 { //hack: special value means read was local
+				local[leader]++
+			}
+		}
+	}
+	done <- e
 
 	/*for i := 0; i < n; i++ {
 		readings <- tss[i]
@@ -331,13 +330,10 @@ func waitReplies(readers []*bufio.Reader, leader int, n int, done chan bool, rea
 }
 
 func printer(readings chan Reading, done chan bool) {
-    n := *reqsNb
-    for i := 0; i < n; i++ {
-        lat := <-readings
-        fmt.Printf("%d %d\n", lat.sent / 1000, lat.latency / 1000)
-    }
-    done <- true
+	n := *reqsNb
+	for i := 0; i < n; i++ {
+		lat := <-readings
+		fmt.Printf("%d %d\n", lat.sent/1000, lat.latency/1000)
+	}
+	done <- true
 }
-
-
-
