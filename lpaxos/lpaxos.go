@@ -12,11 +12,11 @@ import (
 	"encoding/binary"
 	"log"
 
-	"github.com/efficient/qlease/dlog"
-	"github.com/efficient/qlease/fastrpc"
-	"github.com/efficient/qlease/genericsmr"
-	"github.com/efficient/qlease/lpaxosproto"
-	"github.com/efficient/qlease/qleaseproto"
+	"github.com/glycerine/qlease/dlog"
+	"github.com/glycerine/qlease/fastrpc"
+	"github.com/glycerine/qlease/genericsmr"
+	"github.com/glycerine/qlease/lpaxosproto"
+	"github.com/glycerine/qlease/qleaseproto"
 )
 
 const CHAN_BUFFER_SIZE = 2000

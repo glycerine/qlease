@@ -1,3 +1,3 @@
-module github.com/efficient/qlease
+module github.com/glycerine/qlease
 
 go 1.14

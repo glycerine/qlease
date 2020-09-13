@@ -13,9 +13,9 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/efficient/qlease/lpaxos"
-	"github.com/efficient/qlease/masterproto"
-	"github.com/efficient/qlease/paxos"
+	"github.com/glycerine/qlease/lpaxos"
+	"github.com/glycerine/qlease/masterproto"
+	"github.com/glycerine/qlease/paxos"
 )
 
 var portnum *int = flag.Int("port", 7070, "Port # to listen on. Defaults to 7070")

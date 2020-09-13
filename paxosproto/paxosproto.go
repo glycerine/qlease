@@ -1,7 +1,7 @@
 package paxosproto
 
 import (
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/state"
 )
 
 type Prepare struct {

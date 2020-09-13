@@ -1,7 +1,7 @@
 package lpaxosproto
 
 import (
-	"github.com/efficient/qlease/qleaseproto"
+	"github.com/glycerine/qlease/qleaseproto"
 )
 
 type ProposeLease struct {

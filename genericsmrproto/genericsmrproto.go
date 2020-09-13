@@ -1,7 +1,7 @@
 package genericsmrproto
 
 import (
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/state"
 )
 
 const (

@@ -1,8 +1,8 @@
 package paxos
 
 import (
-	"github.com/efficient/qlease/qleaseproto"
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/qleaseproto"
+	"github.com/glycerine/qlease/state"
 )
 
 type ReadStats struct {

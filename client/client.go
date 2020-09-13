@@ -11,12 +11,12 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/efficient/qlease/dlog"
-	"github.com/efficient/qlease/genericsmrproto"
-	"github.com/efficient/qlease/masterproto"
-	"github.com/efficient/qlease/randperm"
-	"github.com/efficient/qlease/state"
-	"github.com/efficient/qlease/ycsbzipf"
+	"github.com/glycerine/qlease/dlog"
+	"github.com/glycerine/qlease/genericsmrproto"
+	"github.com/glycerine/qlease/masterproto"
+	"github.com/glycerine/qlease/randperm"
+	"github.com/glycerine/qlease/state"
+	"github.com/glycerine/qlease/ycsbzipf"
 )
 
 var masterAddr *string = flag.String("maddr", "", "Master address. Defaults to localhost")

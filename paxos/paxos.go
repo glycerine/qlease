@@ -7,16 +7,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/efficient/qlease/dlog"
-	"github.com/efficient/qlease/fastrpc"
-	"github.com/efficient/qlease/genericsmr"
-	"github.com/efficient/qlease/genericsmrproto"
-	"github.com/efficient/qlease/lpaxos"
-	"github.com/efficient/qlease/lpaxosproto"
-	"github.com/efficient/qlease/paxosproto"
-	"github.com/efficient/qlease/qlease"
-	"github.com/efficient/qlease/qleaseproto"
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/dlog"
+	"github.com/glycerine/qlease/fastrpc"
+	"github.com/glycerine/qlease/genericsmr"
+	"github.com/glycerine/qlease/genericsmrproto"
+	"github.com/glycerine/qlease/lpaxos"
+	"github.com/glycerine/qlease/lpaxosproto"
+	"github.com/glycerine/qlease/paxosproto"
+	"github.com/glycerine/qlease/qlease"
+	"github.com/glycerine/qlease/qleaseproto"
+	"github.com/glycerine/qlease/state"
 )
 
 const CHAN_BUFFER_SIZE = 500000

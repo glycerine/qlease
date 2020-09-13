@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/efficient/qlease/genericsmrproto"
-	"github.com/efficient/qlease/masterproto"
+	"github.com/glycerine/qlease/genericsmrproto"
+	"github.com/glycerine/qlease/masterproto"
 	"log"
 	"net"
 	"net/http"

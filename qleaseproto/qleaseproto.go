@@ -1,7 +1,7 @@
 package qleaseproto
 
 import (
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/state"
 )
 
 // The guard message is used before non-renewal lease promises to

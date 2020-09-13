@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/efficient/qlease/fastrpc"
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/fastrpc"
+	"github.com/glycerine/qlease/state"
 )
 
 type byteReader interface {

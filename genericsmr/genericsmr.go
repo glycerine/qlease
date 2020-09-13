@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/efficient/qlease/fastrpc"
-	"github.com/efficient/qlease/genericsmrproto"
-	"github.com/efficient/qlease/qlease"
-	"github.com/efficient/qlease/qleaseproto"
-	"github.com/efficient/qlease/rdtsc"
-	"github.com/efficient/qlease/state"
+	"github.com/glycerine/qlease/fastrpc"
+	"github.com/glycerine/qlease/genericsmrproto"
+	"github.com/glycerine/qlease/qlease"
+	"github.com/glycerine/qlease/qleaseproto"
+	"github.com/glycerine/qlease/rdtsc"
+	"github.com/glycerine/qlease/state"
 )
 
 const CHAN_BUFFER_SIZE = 500000
